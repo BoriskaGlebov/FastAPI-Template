@@ -26,10 +26,10 @@ down:
 	@echo "Сворачиваю проект c удалением всех volumes"
 	docker compose down -v
 
-#lint:
-#	@echo "🔍 Запуск линтеров через pre-commit..."
-#	pre-commit run --all-files
-#
+lint:
+	@echo "Запуск линтеров через pre-commit..."
+	pre-commit run --all-files
+
 #test:
 #	@echo "🧪 Запуск тестов..."
 #	ENV=local pytest tests
