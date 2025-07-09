@@ -13,9 +13,10 @@ up:
 	@echo "Запускаем docker compose."
 	docker compose up -d --build
 
-#down:
-#	@echo "Сворачиваю проект c удалением всех volumes"
-#	docker compose down -v
+down:
+	@echo "Сворачиваю проект c удалением всех volumes"
+	docker compose down -v
+
 #lint:
 #	@echo "🔍 Запуск линтеров через pre-commit..."
 #	pre-commit run --all-files
