@@ -127,7 +127,6 @@ def generate_appointments(
         start_time = generate_random_slot(random_date)
         doctor_times = doctor_schedule.setdefault(doctor.id, [])
 
-        # Проверка, что нет приёма в пределах ±1 часа
         if all(abs((start_time - t).total_seconds()) >= 3600 for t in doctor_times):
             appointment = Appointment(
                 doctor_id=doctor.id,
