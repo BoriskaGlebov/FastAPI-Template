@@ -7,25 +7,12 @@ from loguru import logger
 from pydantic import Field, SecretStr, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-env_file_local: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
-env_file_docker: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env.docker")
+
 
 
 class Settings(BaseSettings):
-    """
-    Схема с конфигурацией приложения.
-
-    Атрибуты:
-        DB_USER (str): Пользователь базы данных.
-        DB_PASSWORD (SecretStr): Пароль базы данных (секрет).
-        DB_HOST (str): Хост базы данных.
-        DB_PORT (int): Порт базы данных.
-        DB_NAME (str): Имя основной базы данных.
-        DB_TEST (str): Имя тестовой базы данных.
-        PYTHONPATH (str): Путь к Python.
-    """
-
-    ENV: str = Field(default="db")  # default = local, но может быть 'container' или 'prod'
+    ENV: str = Field(default="db")  # local когда работаю локально
+    BASE_DIR:Path = Path(__file__).resolve().parent.parent
 
     DB_USER: str
     DB_PASSWORD: SecretStr
@@ -39,19 +26,29 @@ class Settings(BaseSettings):
     LOGGER_ERROR_FILE: str
     LOG_DIR: Path = Path(__file__).resolve().parent / "logs"
 
-    model_config = SettingsConfigDict(extra="ignore")
+
+    class Config:
+        env_file = str(Path(__file__).resolve().parent.parent / ".env")
+        env_file_encoding = 'utf-8'
+        extra="ignore"
 
     def _resolve_host(self) -> str:
-        """Возвращает правильный хост базы данных в зависимости от ENV."""
+        """
+        Определяет правильный хост базы данных в зависимости от значения ENV.
+
+        Returns:
+            str: Адрес хоста базы данных.
+        """
         if self.ENV == "local":
             return "localhost"
-        return self.DB_HOST  # обычно "db" в docker-compose
+        return self.DB_HOST
 
     def get_db_url(self) -> str:
         """
-        Получает URL для основной базы данных.
+        Формирует URL подключения к основной базе данных.
 
-        :return: URL базы данных в формате строки.
+        Returns:
+            str: Строка подключения к основной базе данных в формате postgresql+asyncpg.
         """
         return (
             f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD.get_secret_value()}@"
@@ -60,67 +57,36 @@ class Settings(BaseSettings):
 
     def get_test_db_url(self) -> str:
         """
-        Получает URL для тестовой базы данных.
+        Формирует URL подключения к тестовой базе данных.
 
-        :return: URL тестовой базы данных в формате строки.
+        Returns:
+            str: Строка подключения к тестовой базе данных в формате postgresql+asyncpg.
         """
         return (
             f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD.get_secret_value()}@"
             f"{self._resolve_host()}:{self.DB_PORT}/{self.DB_TEST}"
         )
 
-    @classmethod
-    def static_path(cls) -> str:
-        """Путь к директории для статических файлов."""
-        return os.path.join(os.path.dirname(__file__), "static")
-
-    @classmethod
-    def template_path(cls) -> str:
-        """Возвращает путь к директории для файлов HTML."""
-        return os.path.join(os.path.dirname(__file__), "templates")
-
-
-def get_settings() -> Settings:
-    """Возвращает путь к директории для файлов HTML."""
-    env_file = env_file_docker if os.getenv("ENV") == "docker" else env_file_local
-    try:
-        return Settings(_env_file=env_file)
-    except ValidationError as e:
-        # Извлечение сообщений об ошибках с указанием полей
-        error_messages = []
-        for error in e.errors():
-            field = error["loc"]  # Получаем местоположение ошибки
-            message = error["msg"]  # Получаем сообщение об ошибке
-            error_messages.append(f"Field '{field[-1]}' error: {message}")  # Указываем поле и сообщение
-
-        raise RuntimeError(f"Validation errors: {', '.join(error_messages)}")
-
-
-try:
-    settings = get_settings()
-except RuntimeError as e:
-    print(e)
-
 
 class LoggerConfig:
     """
-    Класс для настройки логирования с помощью loguru.
+    Настройка логгирования с использованием loguru.
 
-    Параметры:
-        log_dir: Директория для хранения логов
-        logger_level_stdout: Уровень логирования для stdout
-        logger_level_file: Уровень логирования для файлового лога
-        logger_error_file: Уровень логирования для файла ошибок
-        extra_defaults: Значения по умолчанию для extra полей
+    Args:
+        log_dir (Path): Путь к директории для хранения логов.
+        logger_level_stdout (str, optional): Уровень логирования для вывода в stdout. Defaults to "INFO".
+        logger_level_file (str, optional): Уровень логирования для основного файла лога. Defaults to "DEBUG".
+        logger_error_file (str, optional): Уровень логирования для файла ошибок. Defaults to "ERROR".
+        extra_defaults (Optional[Dict[str, Any]], optional): Значения по умолчанию для extra полей. Defaults to None.
     """
 
     def __init__(
-        self,
-        log_dir: Path,
-        logger_level_stdout: str = "INFO",
-        logger_level_file: str = "DEBUG",
-        logger_error_file: str = "ERROR",
-        extra_defaults: Optional[Dict[str, Any]] = None,
+            self,
+            log_dir: Path,
+            logger_level_stdout: str = "INFO",
+            logger_level_file: str = "DEBUG",
+            logger_error_file: str = "ERROR",
+            extra_defaults: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.log_dir = log_dir
         self.logger_level_stdout = logger_level_stdout
@@ -132,38 +98,81 @@ class LoggerConfig:
         self._setup_logging()
 
     def _ensure_log_dir_exists(self) -> None:
-        """Создает директорию для логов если она не существует."""
+        """
+        Создает директорию для логов, если она не существует, и устанавливает права доступа.
+
+        Raises:
+            OSError: Если не удалось создать директорию или установить права доступа.
+        """
         if not self.log_dir.exists():
-            self.log_dir.mkdir(parents=True)
-            # Дать права: rwx для владельца, rx для группы и других (755)
-            os.chmod(self.log_dir, 0o777)
+            self.log_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
 
     @staticmethod
     def _user_filter(record: Mapping[str, Any]) -> bool:
-        """Фильтр для логов с указанным пользователем."""
-        user = record["extra"].get("user")
+        """
+        Фильтр для логов с указанным пользователем.
+
+        Args:
+            record (Mapping[str, Any]): Запись лога.
+
+        Returns:
+            bool: True, если поле 'user' в extra присутствует и не равно "-".
+        """
+        user = record.get("extra", {}).get("user")
         return bool(user and user != "-")
 
     @staticmethod
     def _default_filter(record: Mapping[str, Any]) -> bool:
-        """Фильтр для логов без данных пользователя."""
-        user = record["extra"].get("user")
+        """
+        Фильтр для логов без данных пользователя.
+
+        Args:
+            record (Mapping[str, Any]): Запись лога.
+
+        Returns:
+            bool: True, если поле 'user' отсутствует или равно "-".
+        """
+        user = record.get("extra", {}).get("user")
         return user in (None, "-")
 
     @staticmethod
     def _exclude_errors(record: Mapping[str, Any]) -> bool:
-        """Фильтр для исключения ошибок из обычного файла логов."""
+        """
+        Исключает записи с уровнем WARNING и выше.
+
+        Args:
+            record (Mapping[str, Any]): Запись лога.
+
+        Returns:
+            bool: True, если уровень лога ниже WARNING.
+        """
         return record["level"].no < logger.level("WARNING").no
 
+    def _filter_for_files(self, record: Mapping[str, Any]) -> bool:
+        """
+        Объединенный фильтр для файловых логов.
+
+        Args:
+            record (Mapping[str, Any]): Запись лога.
+
+        Returns:
+            bool: True, если запись подходит по фильтру пользователя и не является ошибкой.
+        """
+        return (self._user_filter(record) or self._default_filter(record)) and self._exclude_errors(record)
+
     def _setup_logging(self) -> None:
-        """Настраивает обработчики логирования."""
+        """
+        Конфигурирует логгирование, удаляя все текущие обработчики и добавляя новые.
+        """
         logger.remove()
         logger.configure(extra=self.extra_defaults)
         self._add_stdout_handler()
         self._add_file_handlers()
 
     def _add_stdout_handler(self) -> None:
-        """Добавляет обработчик для вывода в stdout."""
+        """
+        Добавляет обработчик для вывода логов в stdout.
+        """
         logger.add(
             sys.stdout,
             level=self.logger_level_stdout,
@@ -175,9 +184,11 @@ class LoggerConfig:
         )
 
     def _add_file_handlers(self) -> None:
-        """Добавляет обработчики для записи в файлы."""
+        """
+        Добавляет обработчики для записи логов в файлы.
+        """
         log_file_path = self.log_dir / "file.log"
-        log_error_file_path = self.log_dir / "error.log"
+        error_log_file_path = self.log_dir / "error.log"
 
         logger.add(
             str(log_file_path),
@@ -188,12 +199,12 @@ class LoggerConfig:
             catch=True,
             backtrace=True,
             diagnose=True,
-            filter=lambda r: (self._user_filter(r) or self._default_filter(r)) and self._exclude_errors(r),
+            filter=self._filter_for_files,
             enqueue=True,
         )
 
         logger.add(
-            str(log_error_file_path),
+            str(error_log_file_path),
             level=self.logger_error_file,
             format=self._get_format(),
             rotation="1 day",
@@ -207,7 +218,12 @@ class LoggerConfig:
 
     @staticmethod
     def _get_format() -> str:
-        """Возвращает формат строки логов."""
+        """
+        Возвращает формат строки для логов.
+
+        Returns:
+            str: Формат строки для loguru.
+        """
         return (
             "<green>{time:YYYY-MM-DD HH:mm:ss}</green> - "
             "<level>{level:^8}</level> - "
@@ -218,16 +234,40 @@ class LoggerConfig:
         )
 
 
-# Создание конфигурации логгера
-logger_config = LoggerConfig(
-    log_dir=settings.LOG_DIR,
-    logger_level_stdout=settings.LOGGER_LEVEL_STDOUT,
-    logger_level_file=settings.LOGGER_LEVEL_FILE,
-    logger_error_file=settings.LOGGER_ERROR_FILE,
-    extra_defaults={"user": "-"},
-)
-# Теперь вы можете использовать logger в других модулях
-# Явный экспорт для того что б mypy не ругался
+def get_settings() -> Settings:
+    """
+    Загружает настройки из окружения, валидируя их.
+
+    Raises:
+        RuntimeError: Если есть ошибки валидации при загрузке настроек.
+
+    Returns:
+        Settings: Объект настроек приложения.
+    """
+    try:
+        return Settings()
+    except ValidationError as e:
+        error_messages = []
+        for error in e.errors():
+            field = error["loc"]
+            message = error["msg"]
+            error_messages.append(f"Поле '{field[-1]}': {message}")
+        raise RuntimeError(f"Ошибки валидации: {', '.join(error_messages)}")
+
+
+try:
+    settings = get_settings()
+    # Создание конфигурации логгера
+    logger_config = LoggerConfig(
+        log_dir=settings.LOG_DIR,
+        logger_level_stdout=settings.LOGGER_LEVEL_STDOUT,
+        logger_level_file=settings.LOGGER_LEVEL_FILE,
+        logger_error_file=settings.LOGGER_ERROR_FILE,
+        extra_defaults={"user": "-"},
+    )
+except RuntimeError as e:
+    print(e)
+
 __all__ = ["logger"]
 
 if __name__ == "__main__":
@@ -238,5 +278,6 @@ if __name__ == "__main__":
     logger.error("asdasd")
     logger.bind(user="Boris").warning("Сообщение")
     logger.bind(filename="Boris_file.txt").error("Сообщение")
+
     print(settings.get_db_url())
     print(settings.get_test_db_url())

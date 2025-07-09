@@ -1,4 +1,4 @@
-from typing import Awaitable, Union
+from typing import Awaitable, Union, Callable
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -8,49 +8,76 @@ from sqlalchemy.exc import IntegrityError
 from app.config import logger
 
 
-async def http_exception_handler(request: Request, exc: HTTPException) -> Union[JSONResponse, Awaitable[JSONResponse]]:
+async def http_exception_handler(
+        request: Request,
+        exc: HTTPException,
+) -> Union[JSONResponse, Awaitable[JSONResponse]]:
     """
-    Обработка исключений HTTPException.
+    Обработчик исключений HTTPException для FastAPI.
 
-    :param request: Запрос, вызвавший исключение.
-    :param exc: Исключение HTTPException.
-    :return: JSONResponse с информацией об ошибке.
+    Args:
+        request (Request): HTTP-запрос, вызвавший исключение.
+        exc (HTTPException): Объект исключения HTTPException.
+
+    Returns:
+        Union[JSONResponse, Awaitable[JSONResponse]]: JSON-ответ с HTTP-кодом ошибки и описанием.
     """
-    logger.error(exc.detail)
+    logger.error(f"HTTPException: {exc.detail}")
     return JSONResponse(
         status_code=exc.status_code,
-        content={"result": False, "error_type": "HTTPException", "error_message": exc.detail},
+        content={
+            "result": False,
+            "error_type": "HTTPException",
+            "error_message": exc.detail,
+        },
     )
 
 
 async def integrity_error_exception_handler(
-    request: Request, exc: IntegrityError
+        request: Request,
+        exc: IntegrityError,
 ) -> Union[JSONResponse, Awaitable[JSONResponse]]:
     """
-    Обработка исключений IntegrityError.
+    Обработчик ошибок целостности данных (IntegrityError) из SQLAlchemy.
 
-    :param request: Запрос, вызвавший исключение.
-    :param exc: Исключение IntegrityError.
-    :return: JSONResponse с информацией об ошибке.
+    Args:
+        request (Request): HTTP-запрос, вызвавший исключение.
+        exc (IntegrityError): Объект исключения IntegrityError.
+
+    Returns:
+        Union[JSONResponse, Awaitable[JSONResponse]]: JSON-ответ с кодом 409 и подробностями ошибки.
     """
-    logger.error(repr(exc.orig))
+    logger.error(f"IntegrityError: {repr(exc.orig)}")
     return JSONResponse(
         status_code=409,
-        content={"result": False, "error_type": "sqlalchemy.exc.IntegrityError", "error_message": repr(exc.orig)},
+        content={
+            "result": False,
+            "error_type": "sqlalchemy.exc.IntegrityError",
+            "error_message": repr(exc.orig),
+        },
     )
 
 
 async def validation_exception_handler(
-    request: Request, exc: ValidationError
+        request: Request,
+        exc: ValidationError,
 ) -> Union[JSONResponse, Awaitable[JSONResponse]]:
     """
-    Обработка исключений ValidationError.
+    Обработчик ошибок валидации Pydantic (ValidationError).
 
-    :param request: Запрос, вызвавший исключение.
-    :param exc: Исключение ValidationError.
-    :return: JSONResponse с информацией об ошибке.
+    Args:
+        request (Request): HTTP-запрос, вызвавший исключение.
+        exc (ValidationError): Объект исключения ValidationError.
+
+    Returns:
+        Union[JSONResponse, Awaitable[JSONResponse]]: JSON-ответ с кодом 400 и деталями ошибки валидации.
     """
-    logger.error(exc.errors())
+    logger.error(f"ValidationError: {exc.errors()}")
     return JSONResponse(
-        status_code=400, content={"result": False, "error_type": "Validation error", "error_message": exc.errors()}
+        status_code=400,
+        content={
+            "result": False,
+            "error_type": "ValidationError",
+            "error_message": exc.errors(),
+        },
     )
