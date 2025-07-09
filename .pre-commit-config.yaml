@@ -19,7 +19,7 @@ repos:
         language_version: python3.12
 
   - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+    rev: 6.0.1
     hooks:
       - id: isort
 
@@ -42,9 +42,11 @@ repos:
     rev: v1.16.1
     hooks:
       - id: mypy
+        args: [ "--ignore-missing-imports" ]
         additional_dependencies:
           - types-atomicwrites
           - types-tabulate
           - types-freezegun
-          - pydantic
+          - pydantic>=2.0
+          - pydantic-settings
           - sqlalchemy

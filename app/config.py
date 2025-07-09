@@ -1,18 +1,15 @@
-import os
-import sys
 from pathlib import Path
+import sys
 from typing import Any, Dict, Mapping, Optional
 
 from loguru import logger
 from pydantic import Field, SecretStr, ValidationError
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
+from pydantic_settings import BaseSettings, SettingsConfigDict  # type: ignore
 
 
 class Settings(BaseSettings):
     ENV: str = Field(default="db")  # local когда работаю локально
-    BASE_DIR:Path = Path(__file__).resolve().parent.parent
+    BASE_DIR: Path = Path(__file__).resolve().parent.parent
 
     DB_USER: str
     DB_PASSWORD: SecretStr
@@ -26,15 +23,14 @@ class Settings(BaseSettings):
     LOGGER_ERROR_FILE: str
     LOG_DIR: Path = Path(__file__).resolve().parent / "logs"
 
-
-    class Config:
-        env_file = str(Path(__file__).resolve().parent.parent / ".env")
-        env_file_encoding = 'utf-8'
-        extra="ignore"
+    model_config = SettingsConfigDict(
+        env_file=str(Path(__file__).resolve().parent.parent / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     def _resolve_host(self) -> str:
-        """
-        Определяет правильный хост базы данных в зависимости от значения ENV.
+        """Определяет правильный хост базы данных в зависимости от значения ENV.
 
         Returns:
             str: Адрес хоста базы данных.
@@ -44,8 +40,7 @@ class Settings(BaseSettings):
         return self.DB_HOST
 
     def get_db_url(self) -> str:
-        """
-        Формирует URL подключения к основной базе данных.
+        """Формирует URL подключения к основной базе данных.
 
         Returns:
             str: Строка подключения к основной базе данных в формате postgresql+asyncpg.
@@ -56,8 +51,7 @@ class Settings(BaseSettings):
         )
 
     def get_test_db_url(self) -> str:
-        """
-        Формирует URL подключения к тестовой базе данных.
+        """Формирует URL подключения к тестовой базе данных.
 
         Returns:
             str: Строка подключения к тестовой базе данных в формате postgresql+asyncpg.
@@ -69,8 +63,7 @@ class Settings(BaseSettings):
 
 
 class LoggerConfig:
-    """
-    Настройка логгирования с использованием loguru.
+    """Настройка логгирования с использованием loguru.
 
     Args:
         log_dir (Path): Путь к директории для хранения логов.
@@ -81,12 +74,12 @@ class LoggerConfig:
     """
 
     def __init__(
-            self,
-            log_dir: Path,
-            logger_level_stdout: str = "INFO",
-            logger_level_file: str = "DEBUG",
-            logger_error_file: str = "ERROR",
-            extra_defaults: Optional[Dict[str, Any]] = None,
+        self,
+        log_dir: Path,
+        logger_level_stdout: str = "INFO",
+        logger_level_file: str = "DEBUG",
+        logger_error_file: str = "ERROR",
+        extra_defaults: Optional[Dict[str, Any]] = None,
     ) -> None:
         self.log_dir = log_dir
         self.logger_level_stdout = logger_level_stdout
@@ -98,8 +91,7 @@ class LoggerConfig:
         self._setup_logging()
 
     def _ensure_log_dir_exists(self) -> None:
-        """
-        Создает директорию для логов, если она не существует, и устанавливает права доступа.
+        """Создает директорию для логов, если она не существует, и устанавливает права доступа.
 
         Raises:
             OSError: Если не удалось создать директорию или установить права доступа.
@@ -109,8 +101,7 @@ class LoggerConfig:
 
     @staticmethod
     def _user_filter(record: Mapping[str, Any]) -> bool:
-        """
-        Фильтр для логов с указанным пользователем.
+        """Фильтр для логов с указанным пользователем.
 
         Args:
             record (Mapping[str, Any]): Запись лога.
@@ -123,8 +114,7 @@ class LoggerConfig:
 
     @staticmethod
     def _default_filter(record: Mapping[str, Any]) -> bool:
-        """
-        Фильтр для логов без данных пользователя.
+        """Фильтр для логов без данных пользователя.
 
         Args:
             record (Mapping[str, Any]): Запись лога.
@@ -137,8 +127,7 @@ class LoggerConfig:
 
     @staticmethod
     def _exclude_errors(record: Mapping[str, Any]) -> bool:
-        """
-        Исключает записи с уровнем WARNING и выше.
+        """Исключает записи с уровнем WARNING и выше.
 
         Args:
             record (Mapping[str, Any]): Запись лога.
@@ -146,11 +135,10 @@ class LoggerConfig:
         Returns:
             bool: True, если уровень лога ниже WARNING.
         """
-        return record["level"].no < logger.level("WARNING").no
+        return int(record["level"].no) < int(logger.level("WARNING").no)
 
     def _filter_for_files(self, record: Mapping[str, Any]) -> bool:
-        """
-        Объединенный фильтр для файловых логов.
+        """Объединенный фильтр для файловых логов.
 
         Args:
             record (Mapping[str, Any]): Запись лога.
@@ -158,21 +146,19 @@ class LoggerConfig:
         Returns:
             bool: True, если запись подходит по фильтру пользователя и не является ошибкой.
         """
-        return (self._user_filter(record) or self._default_filter(record)) and self._exclude_errors(record)
+        return (
+            self._user_filter(record) or self._default_filter(record)
+        ) and self._exclude_errors(record)
 
     def _setup_logging(self) -> None:
-        """
-        Конфигурирует логгирование, удаляя все текущие обработчики и добавляя новые.
-        """
+        """Конфигурирует логгирование, удаляя все текущие обработчики и добавляя новые."""
         logger.remove()
         logger.configure(extra=self.extra_defaults)
         self._add_stdout_handler()
         self._add_file_handlers()
 
     def _add_stdout_handler(self) -> None:
-        """
-        Добавляет обработчик для вывода логов в stdout.
-        """
+        """Добавляет обработчик для вывода логов в stdout."""
         logger.add(
             sys.stdout,
             level=self.logger_level_stdout,
@@ -184,9 +170,7 @@ class LoggerConfig:
         )
 
     def _add_file_handlers(self) -> None:
-        """
-        Добавляет обработчики для записи логов в файлы.
-        """
+        """Добавляет обработчики для записи логов в файлы."""
         log_file_path = self.log_dir / "file.log"
         error_log_file_path = self.log_dir / "error.log"
 
@@ -218,8 +202,7 @@ class LoggerConfig:
 
     @staticmethod
     def _get_format() -> str:
-        """
-        Возвращает формат строки для логов.
+        """Возвращает формат строки для логов.
 
         Returns:
             str: Формат строки для loguru.
@@ -235,8 +218,7 @@ class LoggerConfig:
 
 
 def get_settings() -> Settings:
-    """
-    Загружает настройки из окружения, валидируя их.
+    """Загружает настройки из окружения, валидируя их.
 
     Raises:
         RuntimeError: Если есть ошибки валидации при загрузке настроек.
