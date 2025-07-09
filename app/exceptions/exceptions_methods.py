@@ -1,4 +1,4 @@
-from typing import Awaitable, Union, Callable
+from typing import Awaitable, Union
 
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -9,11 +9,10 @@ from app.config import logger
 
 
 async def http_exception_handler(
-        request: Request,
-        exc: HTTPException,
+    request: Request,
+    exc: HTTPException,
 ) -> Union[JSONResponse, Awaitable[JSONResponse]]:
-    """
-    Обработчик исключений HTTPException для FastAPI.
+    """бработчик исключений HTTPException для FastAPI.
 
     Args:
         request (Request): HTTP-запрос, вызвавший исключение.
@@ -34,11 +33,10 @@ async def http_exception_handler(
 
 
 async def integrity_error_exception_handler(
-        request: Request,
-        exc: IntegrityError,
+    request: Request,
+    exc: IntegrityError,
 ) -> Union[JSONResponse, Awaitable[JSONResponse]]:
-    """
-    Обработчик ошибок целостности данных (IntegrityError) из SQLAlchemy.
+    """Обработчик ошибок целостности данных (IntegrityError) из SQLAlchemy.
 
     Args:
         request (Request): HTTP-запрос, вызвавший исключение.
@@ -59,11 +57,10 @@ async def integrity_error_exception_handler(
 
 
 async def validation_exception_handler(
-        request: Request,
-        exc: ValidationError,
+    request: Request,
+    exc: ValidationError,
 ) -> Union[JSONResponse, Awaitable[JSONResponse]]:
-    """
-    Обработчик ошибок валидации Pydantic (ValidationError).
+    """Обработчик ошибок валидации Pydantic (ValidationError).
 
     Args:
         request (Request): HTTP-запрос, вызвавший исключение.
