@@ -1,8 +1,8 @@
-"""add cascade
+"""init
 
-Revision ID: 7a7cbcf0f1c8
-Revises: 889fa333af67
-Create Date: 2025-07-05 17:51:56.156722
+Revision ID: 16d5804309f2
+Revises:
+Create Date: 2025-07-09 23:05:37.131497
 
 """
 
@@ -12,8 +12,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "7a7cbcf0f1c8"
-down_revision: Union[str, Sequence[str], None] = "889fa333af67"
+revision: str = "16d5804309f2"
+down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

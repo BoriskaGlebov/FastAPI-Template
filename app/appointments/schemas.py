@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated
 
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field
 
 
 class SAppointmentCreate(BaseModel):
@@ -26,16 +26,3 @@ class SAppointmentCreate(BaseModel):
             json_schema_extra={"example": "2025-07-05 10:30"},
         ),
     ]
-
-    @field_serializer("start_time")
-    def serialize_start_time(self, value: datetime, _info: Any) -> str:
-        """Форматирование времени в виде строки: YYYY-MM-DD HH:MM.
-
-        Args:
-            value (datetime): Входящее значение времени начала приёма.
-            _info (Any): Дополнительная информация сериализатора (не используется).
-
-        Returns:
-            str: Отформатированное время начала приёма.
-        """
-        return value.strftime("%Y-%m-%d %H:%M")
