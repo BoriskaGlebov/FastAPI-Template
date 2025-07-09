@@ -1,0 +1,7 @@
+.pre-commit-config.yaml
+pyproject.toml
+.env-template
+.gitignore
+.github
+app/logs
+doc_artefacts/
