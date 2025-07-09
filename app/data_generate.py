@@ -2,10 +2,10 @@ from datetime import datetime, time
 from random import choice, randint
 from typing import List, Set, Tuple
 
-import faker
 from factory.base import Factory
 from factory.declarations import LazyAttribute, LazyFunction
 from factory.faker import Faker
+import faker
 
 from app.appointments.models import Appointment, Doctor, Patient
 
@@ -19,8 +19,8 @@ class PatientFactory(Factory[Patient]):
         model = Patient
 
     name = Faker("name", locale="ru_RU")
-    email = LazyAttribute(lambda o: faker_instance.unique.email())
-    phone = LazyAttribute(lambda o: faker_instance.phone_number())
+    email = LazyAttribute(lambda _: faker_instance.unique.email())
+    phone = LazyAttribute(lambda _: faker_instance.phone_number())
 
 
 class DoctorFactory(Factory[Doctor]):
@@ -30,7 +30,9 @@ class DoctorFactory(Factory[Doctor]):
         model = Doctor
 
     name = Faker("name", locale="ru_RU")
-    specialization = LazyFunction(lambda: choice(["Терапевт", "Хирург", "Кардиолог", "Невролог"]))
+    specialization = LazyFunction(
+        lambda: choice(["Терапевт", "Хирург", "Кардиолог", "Невролог"])
+    )
     experience_years = LazyFunction(lambda: randint(1, 40))
 
 
@@ -42,40 +44,45 @@ class AppointmentFactory(Factory[Appointment]):
 
     doctor_id = LazyFunction(lambda: randint(1, 5))
     patient_id = LazyFunction(lambda: randint(1, 10))
-    start_time = LazyFunction(lambda: faker_instance.date_time_between(start_date="now", end_date="+10d"))
+    start_time = LazyFunction(
+        lambda: faker_instance.date_time_between(start_date="now", end_date="+10d")
+    )
 
 
 def generate_patients(num_patients: int = 10) -> List[Patient]:
-    """
-    Генерирует список экземпляров Patient.
+    """Генерирует список экземпляров Patient.
 
     Args:
-        num_patients (int): Количество пациентов.
+        num_patients (int): Количество пациентов для генерации.
 
     Returns:
         List[Patient]: Список сгенерированных пациентов.
     """
-    out_instance = [PatientFactory() for _ in range(num_patients)]
-    return out_instance  # type: ignore
+    return [PatientFactory() for _ in range(num_patients)]  # type: ignore
 
 
 def generate_doctors(num_doctors: int = 5) -> List[Doctor]:
-    """
-    Генерирует список экземпляров Doctor.
+    """Генерирует список экземпляров Doctor.
 
     Args:
-        num_doctors (int): Количество врачей.
+        num_doctors (int): Количество врачей для генерации.
 
     Returns:
         List[Doctor]: Список сгенерированных врачей.
     """
-    out_instance = [DoctorFactory() for _ in range(num_doctors)]
-    return out_instance  # type: ignore
+    return [DoctorFactory() for _ in range(num_doctors)]  # type: ignore
 
 
 def generate_random_slot(date: datetime) -> datetime:
-    """Генерирует случайное время между 8:00 и 18:00 на указанную дату, с шагом 15 минут."""
-    hour = randint(8, 17)  # 17, чтобы не выйти за 18:00
+    """Генерирует случайное время на указанную дату в интервале 08:00–18:00 с шагом 15 минут.
+
+    Args:
+        date (datetime): Дата, на которую нужно сгенерировать время.
+
+    Returns:
+        datetime: Объект datetime с выбранной датой и случайным временем.
+    """
+    hour = randint(8, 17)  # До 17:45, чтобы не выйти за 18:00
     minute = choice([0, 15, 30, 45])
     return datetime.combine(date.date(), time(hour, minute))
 
@@ -85,16 +92,23 @@ def generate_appointments(
     doctors: List[Doctor],
     num_appointments: int = 20,
 ) -> List[Appointment]:
-    """
-    Генерирует список уникальных записей к врачам с учётом.
+    """Генерирует уникальные записи к врачам с учетом ограничений.
 
-    - интервала минимум в 1 час между записями одного врача,
-    - уникальности пары doctor-patient (пациент не может записаться дважды к одному врачу),
-    - времени приёма только в диапазоне 8:00–18:00.
+    - Интервал между записями одного врача должен быть минимум 1 час.
+    - Один пациент не может быть записан к одному врачу более одного раза.
+    - Время приёма находится в пределах 08:00–18:00.
+
+    Args:
+        patients (List[Patient]): Список доступных пациентов.
+        doctors (List[Doctor]): Список доступных врачей.
+        num_appointments (int): Количество записей, которые нужно создать.
+
+    Returns:
+        List[Appointment]: Список сгенерированных уникальных записей.
     """
     appointments: List[Appointment] = []
-    doctor_schedule: dict[int, List[datetime]] = {}  # doctor_id -> список времени приёмов
-    used_pairs: Set[Tuple[int, int]] = set()  # (doctor_id, patient_id)
+    doctor_schedule: dict[int, List[datetime]] = {}
+    used_pairs: Set[Tuple[int, int]] = set()
 
     attempts = 0
     max_attempts = num_appointments * 15
@@ -102,23 +116,25 @@ def generate_appointments(
     while len(appointments) < num_appointments and attempts < max_attempts:
         doctor = choice(doctors)
         patient = choice(patients)
+
         if (doctor.id, patient.id) in used_pairs:
             attempts += 1
-            continue  # пациент уже записан к этому врачу
+            continue
 
-        random_date = faker_instance.date_time_between(start_date="now", end_date="+10d")
+        random_date = faker_instance.date_time_between(
+            start_date="now", end_date="+10d"
+        )
         start_time = generate_random_slot(random_date)
         doctor_times = doctor_schedule.setdefault(doctor.id, [])
 
-        # Проверка: нет записи у врача в пределах +/- 1 часа
+        # Проверка, что нет приёма в пределах ±1 часа
         if all(abs((start_time - t).total_seconds()) >= 3600 for t in doctor_times):
-            appointments.append(
-                Appointment(
-                    doctor_id=doctor.id,
-                    patient_id=patient.id,
-                    start_time=start_time,
-                )
+            appointment = Appointment(
+                doctor_id=doctor.id,
+                patient_id=patient.id,
+                start_time=start_time,
             )
+            appointments.append(appointment)
             doctor_times.append(start_time)
             used_pairs.add((doctor.id, patient.id))
 

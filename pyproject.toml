@@ -5,7 +5,7 @@ description = "Default template for PDM package"
 authors = [
     { name = "BoriskaGlebov", email = "boristheblade.glebov@yandex.ru" },
 ]
-dependencies = ["fastapi>=0.116.0", "uvicorn>=0.35.0", "pydantic>=2.11.7", "sqlalchemy>=2.0.41", "alembic>=1.16.3", "loguru>=0.7.3", "pydantic-settings>=2.10.1"]
+dependencies = ["fastapi>=0.116.0", "uvicorn>=0.35.0", "pydantic>=2.11.7", "sqlalchemy>=2.0.41", "alembic>=1.16.3", "loguru>=0.7.3", "pydantic-settings>=2.10.1", "asyncpg>=0.30.0", "factory-boy>=3.3.3", "faker>=37.4.0"]
 requires-python = "==3.12.*"
 readme = "README.md"
 license = { text = "MIT" }
@@ -25,6 +25,7 @@ lint = [
     "types-freezegun>=1.1.10",
     "pydantic>=2.11.7",
     "sqlalchemy>=2.0.41",
+    "pydantic-settings>=2.10.1",
 ]
 
 
@@ -87,7 +88,6 @@ warn_unused_ignores = false
 disallow_any_generics = true
 check_untyped_defs = true
 no_implicit_reexport = true
-strict = true # строгий режим
 
 [tool.pdm]
 distribution = false

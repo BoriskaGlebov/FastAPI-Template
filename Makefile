@@ -10,8 +10,17 @@ up:
 	fi
 	chmod +x init.sh
 
-	@echo "Запускаем docker compose."
+	@echo "Запускаем docker compose"
 	docker compose up -d --build
+
+	@echo "Ожидание готовности базы данных..."
+	@until pg_isready -h localhost -p 5432; do \
+		echo "Ждём..."; \
+		sleep 1; \
+	done
+
+	@echo "Применение миграций"
+	ENV=local alembic upgrade head
 
 down:
 	@echo "Сворачиваю проект c удалением всех volumes"
