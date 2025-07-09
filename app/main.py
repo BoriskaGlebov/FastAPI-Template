@@ -1,11 +1,11 @@
-import os
 from contextlib import asynccontextmanager
+import os
 from typing import Any, Dict, List
 
-import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+import uvicorn
 
 from app.appointments.dao import AppointmentDAO, DoctorDAO, PatientDAO
 from app.appointments.router import router as router_appointment
@@ -18,9 +18,7 @@ from app.exceptions.exceptions_methods import (
     integrity_error_exception_handler,
     validation_exception_handler,
 )
-from migrations_script import run_alembic_command
 
-# API теги и их описание
 tags_metadata: List[Dict[str, Any]] = [
     {
         "name": "Appointments",
@@ -31,56 +29,55 @@ tags_metadata: List[Dict[str, Any]] = [
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Действия перед запуском приложения.
+    """Жизненный цикл приложения FastAPI.
 
-    :param app:
-    :return:
-    """
-    logger.info("Перед первым запуском необходимо убедиться в актуальности версии миграции")
-    if os.path.split(os.getcwd())[1] == "app":
-        run_alembic_command("cd ..; alembic upgrade head;alembic current")
-    elif os.path.split(os.getcwd())[1] == "girumed":
-        run_alembic_command("alembic upgrade head;alembic current")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+    Если переменная окружения RESET_DB установлена в "1", то при запуске:
+    - Пересоздаётся база данных (drop_all + create_all).
+    - Добавляются тестовые врачи и пациенты.
+    - Создаются тестовые записи приёмов.
 
-    async for session in get_session():
-        [await DoctorDAO.add(session, **user.to_dict()) for user in generate_doctors(5)]
-        [await PatientDAO.add(session, **user.to_dict()) for user in generate_patients(5)]
-        doctors = await DoctorDAO.find_all(async_session=session)
-        patients = await PatientDAO.find_all(async_session=session)
-        # Генерируем приёмы
-        for user in generate_appointments(patients=patients, doctors=doctors, num_appointments=20):  # type: ignore
-            try:
-                await AppointmentDAO.add(session, **user.to_dict())
-            except ValueError as e:
-                logger.warning(f"⚠️ Не удалось создать приём: {e}")
-            except SQLAlchemyError as e:
-                logger.error(f"❌ Ошибка базы данных при создании приёма: {e}")
+    Args:
+        app (FastAPI): Экземпляр приложения FastAPI.
+
+    Yields:
+        None: Управляет жизненным циклом приложения.
+    """
+    if os.getenv("RESET_DB", "0") == "1":
+        logger.warning("Пересоздание БД (drop_all + create_all) включено!")
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
+
+        async for session in get_session():
+            for doctor in generate_doctors(5):
+                await DoctorDAO.add(session, **doctor.to_dict())
+
+            for patient in generate_patients(5):
+                await PatientDAO.add(session, **patient.to_dict())
+
+            doctors = list(await DoctorDAO.find_all(async_session=session))
+            patients = list(await PatientDAO.find_all(async_session=session))
+
+            for appointment in generate_appointments(
+                patients=patients, doctors=doctors, num_appointments=20
+            ):
+                try:
+                    await AppointmentDAO.add(session, **appointment.to_dict())
+                except (ValueError, SQLAlchemyError) as e:
+                    logger.warning(f"Ошибка при создании приёма: {e}")
+
     yield
 
 
 app = FastAPI(
     debug=True,
     title="Girumed Test API",
-    summary="Соберите минимальный, но полноценный микросервис для записи пациентов и "
-    "подготовьте его так, чтобы коллега мог развернуть проект за пару "
-    "минут и сразу увидеть живой API.",
+    summary="Микросервис для записи пациентов с возможностью быстрого развёртывания и тестирования.",
     description="""
----
-# Girumed Test API
-
-## Сервис и бизнес-логика
-1. Напишите приложение на FastAPI или Flask.
-2. Создайте модель Appointment и два эндпойнта:
-3. POST /appointments — создать запись;
-4. GET /appointments/{id} — получить запись по ID.
-5. В базе должна быть уникальная пара doctor_id + start_time, чтобы один врач не принимал двух пациентов одновременно.
-
-
----
+## Эндпойнты
+- `POST /appointments` — создать запись.
+- `GET /appointments/{id}` — получить запись по ID.
+- Ограничение: уникальность пары doctor_id + start_time.
 
 """,
     openapi_tags=tags_metadata,
@@ -94,8 +91,6 @@ app = FastAPI(
 
 app.include_router(router_appointment)
 
-
-# Определение обработчиков исключений
 app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore[arg-type]
 app.add_exception_handler(IntegrityError, integrity_error_exception_handler)  # type: ignore[arg-type]
 app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
@@ -103,7 +98,11 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler) 
 
 @app.get("/health")
 async def health_check():
-    """Проверка статуса контейнера."""
+    """Эндпойнт для проверки состояния сервиса.
+
+    Returns:
+        dict: {"status": "ok"} — если сервис работает.
+    """
     return {"status": "ok"}
 
 
