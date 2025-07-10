@@ -1,4 +1,4 @@
-from typing import Any, Generic, List, Sequence, Type, TypeVar, Union, cast
+from typing import Any, Generic, List, Optional, Sequence, Type, TypeVar, Union, cast
 
 from sqlalchemy import delete as sqlalchemy_delete, update as sqlalchemy_update
 from sqlalchemy.exc import SQLAlchemyError
@@ -158,14 +158,14 @@ class BaseDAO(Generic[M]):
     async def delete(
         cls,
         async_session: AsyncSession,
-        delete_all: bool = False,
+        delete_all: Optional[bool] = False,
         **filter_by: Any,
     ) -> int:
         """Удалить записи по фильтру или очистить всю таблицу.
 
         Args:
             async_session (AsyncSession): Асинхронная сессия SQLAlchemy.
-            delete_all (bool, optional): Если True — удалить все записи. По умолчанию False.
+            delete_all (Optional[bool]): Если True — удалить все записи. По умолчанию False.
             **filter_by: Ключевые аргументы для фильтрации записей на удаление.
 
         Raises:

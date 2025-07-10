@@ -60,6 +60,8 @@ flake8==7.3.0 \
 flake8-docstrings==1.7.0 \
     --hash=sha256:4c8cc748dc16e6869728699e5d0d685da9a10b0ea718e090b1ba088e67a941af \
     --hash=sha256:51f2344026da083fc084166a9353f5082b01f72901df422f74b4d953ae88ac75
+flake8-pyproject==1.2.3 \
+    --hash=sha256:6249fe53545205af5e76837644dc80b4c10037e73a0e5db87ff562d75fb5bd4a
 greenlet==3.2.3; (platform_machine == "win32" or platform_machine == "WIN32" or platform_machine == "AMD64" or platform_machine == "amd64" or platform_machine == "x86_64" or platform_machine == "ppc64le" or platform_machine == "aarch64") and python_version < "3.14" \
     --hash=sha256:0cc73378150b8b78b0c9fe2ce56e166695e67478550769536a6742dca3651688 \
     --hash=sha256:25ad29caed5783d4bd7a85c9251c651696164622494c00802a139c00d639242d \

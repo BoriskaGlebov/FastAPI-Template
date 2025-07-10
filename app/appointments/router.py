@@ -65,9 +65,6 @@ async def create_appointment(
 
     Returns:
         RBAppointmentRead: Созданная запись на приём.
-
-    Raises:
-        HTTPException: Возникает при нарушении бизнес-правил или при отсутствии врача/пациента.
     """
     logger.info(
         f"Попытка создать запись: доктор={data.doctor_id}, пациент={data.patient_id}, время={data.start_time}"

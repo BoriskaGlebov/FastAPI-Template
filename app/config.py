@@ -91,11 +91,7 @@ class LoggerConfig:
         self._setup_logging()
 
     def _ensure_log_dir_exists(self) -> None:
-        """Создает директорию для логов, если она не существует, и устанавливает права доступа.
-
-        Raises:
-            OSError: Если не удалось создать директорию или установить права доступа.
-        """
+        """Создает директорию для логов, если она не существует, и устанавливает права доступа."""
         if not self.log_dir.exists():
             self.log_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
 
