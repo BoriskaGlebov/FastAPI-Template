@@ -1,0 +1,157 @@
+name: Linters Pipeline
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+jobs:
+  mypy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install \
+               mypy \
+               types-setuptools \
+               types-requests \
+               types-tabulate \
+               types-freezegun \
+               types-python-dateutil \
+               types-pyyaml
+      - name: Run MyPy and check type coverage
+        run: |
+          mkdir -p reports
+          mypy --config-file=pyproject.toml --linecount-report reports .
+
+          if [[ ! -f reports/linecount.txt ]]; then
+            echo "❌ MyPy total report not found"
+            exit 1
+          fi
+
+          total_line=$(awk '{total+=$2} END {print total}' reports/linecount.txt)
+          typed_line=$(awk '{typed+=$1} END {print typed}' reports/linecount.txt)
+          percent=$(echo "scale=2; 100 * $typed_line / $total_line" | bc)
+
+          echo "🔍 MyPy type coverage: $percent%"
+
+          required=90.00
+          if (( $(echo "$percent < $required" | bc -l) )); then
+            echo "❌ Type coverage ($percent%) is below threshold ($required%)"
+            exit 1
+          else
+            echo "✅ Type coverage is sufficient ($percent%)"
+          fi
+
+
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run Black formatting check
+        run: black --diff --check .
+
+  isort:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run Isort check
+        run: isort --check-only .
+
+  flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run Flake8 linting
+        run: flake8 .
+
+  tests:
+    runs-on: ubuntu-latest
+    needs: [ mypy, black, isort, flake8 ]  # Зависит от всех линтеров
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'  # Укажите версию Python
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: .env file create
+        run: |
+          echo "Creating .env file"
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DB_TEST=${{ secrets.DB_TEST }}" >> .env
+          echo "PYTHONPATH=${{ secrets.PYTHONPATH }}" >> .env
+          echo "LOGGER_LEVEL_STDOUT=${{secrets.LOGGER_LEVEL_STDOUT}}">>.env
+          echo "LOGGER_LEVEL_FILE=${{secrets.LOGGER_LEVEL_FILE}}">>.env
+          echo "LOGGER_ERROR_FILE=${{secrets.LOGGER_ERROR_FILE}}">>.env
+
+      - name: .env file check
+        run: |
+          echo "Contents of .env file:"
+          cat .env
+
+      - name: Build and run Docker Compose
+        run: |
+          make up
+
+      - name: Run Tests Container
+        run: |
+          make test-CI
+
+      - name: Run Tests local
+        run: |
+          make test
+
+
+  docker_push:
+    name: 🚀 Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [ tests ]  # Выполнится только после прохождения тестов
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build Docker image Push Docker image
+        run: |
+          echo "📦 Собираем образ и 🚀 Пушим образ..."
+          make push
