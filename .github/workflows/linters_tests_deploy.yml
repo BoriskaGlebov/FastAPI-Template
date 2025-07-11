@@ -130,11 +130,11 @@ jobs:
 
       - name: Run Tests Container
         run: |
-          make test-CI
+          make test
 
       - name: Run Tests local
         run: |
-          make test
+          make test-CI
 
 
   docker_push:
