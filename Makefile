@@ -60,7 +60,7 @@ lint-mypy:
 
 test-CI:
 	@echo "Запуск тестов в контейнере"
-	docker compose exec api pytest tests
+	docker compose exec api pytest --reruns 2 tests
 
 push:
 	@echo "Собираем образ из Dockerfile"

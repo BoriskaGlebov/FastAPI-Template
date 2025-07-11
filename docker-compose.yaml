@@ -30,10 +30,10 @@ services:
       - girumed_net
 
   api:
-#    image: boristhebladeglebov/girumed-app:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: boristhebladeglebov/girumed-app:latest
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
     container_name: fastapi_girumed
     env_file:
       - .env
