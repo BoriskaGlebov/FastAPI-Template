@@ -138,9 +138,9 @@ jobs:
 
 
   docker_push:
-    name: 🚀 Push Docker Image
+    name: Push Docker Image
     runs-on: ubuntu-latest
-    needs: [ tests ]  # Выполнится только после прохождения тестов
+    needs: [ tests ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -153,5 +153,5 @@ jobs:
 
       - name: Build Docker image Push Docker image
         run: |
-          echo "📦 Собираем образ и 🚀 Пушим образ..."
+          echo "Build Docker image Push Docker image"
           make push
