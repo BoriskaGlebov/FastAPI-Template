@@ -14,18 +14,12 @@ from typing_extensions import Annotated
 from app.config import settings
 
 DATABASE_URL = settings.get_db_url()
-TEST_DATABASE_URL = settings.get_test_db_url()
 
-# Настройки для подключения к основной и тестовой базам данных
 engine = create_async_engine(DATABASE_URL)
-test_engine = create_async_engine(TEST_DATABASE_URL)
 
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-async_test_session = async_sessionmaker(
-    test_engine, class_=AsyncSession, expire_on_commit=False
-)
 
-# Настройки аннотаций для колонок моделей общие для всех моделей
+
 int_pk = Annotated[int, mapped_column(primary_key=True, autoincrement=True)]
 created_at = Annotated[datetime, mapped_column(server_default=func.now())]
 updated_at = Annotated[

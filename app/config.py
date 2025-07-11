@@ -246,7 +246,7 @@ try:
 except RuntimeError as e:
     print(e)
 
-__all__ = ["logger"]
+__all__ = ["logger", "get_settings", "settings"]
 
 if __name__ == "__main__":
     logger.bind(user="Boris").debug("Сообщение")

@@ -46,25 +46,26 @@ async def lifespan(app: FastAPI):
         logger.warning("Пересоздание БД (drop_all + create_all) включено!")
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
-            await conn.run_sync(Base.metadata.create_all)
 
-        async for session in get_session():
-            for doctor in generate_doctors(5):
-                await DoctorDAO.add(session, **doctor.to_dict())
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async for session in get_session():
+        for doctor in generate_doctors(5):
+            await DoctorDAO.add(session, **doctor.to_dict())
 
-            for patient in generate_patients(5):
-                await PatientDAO.add(session, **patient.to_dict())
+        for patient in generate_patients(5):
+            await PatientDAO.add(session, **patient.to_dict())
 
-            doctors = list(await DoctorDAO.find_all(async_session=session))
-            patients = list(await PatientDAO.find_all(async_session=session))
+        doctors = list(await DoctorDAO.find_all(async_session=session))
+        patients = list(await PatientDAO.find_all(async_session=session))
 
-            for appointment in generate_appointments(
-                patients=patients, doctors=doctors, num_appointments=20
-            ):
-                try:
-                    await AppointmentDAO.add(session, **appointment.to_dict())
-                except (ValueError, SQLAlchemyError) as e:
-                    logger.warning(f"Ошибка при создании приёма: {e}")
+        for appointment in generate_appointments(
+            patients=patients, doctors=doctors, num_appointments=20
+        ):
+            try:
+                await AppointmentDAO.add(session, **appointment.to_dict())
+            except (ValueError, SQLAlchemyError) as e:
+                logger.warning(f"Ошибка при создании приёма: {e}")
 
     yield
 

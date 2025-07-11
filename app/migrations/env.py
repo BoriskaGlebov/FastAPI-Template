@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.appointments.models import Appointment, Doctor, Patient
 from app.config import settings  # Импортируйте ваши настройки
-from app.database import DATABASE_URL, TEST_DATABASE_URL, Base  # Импортируйте ваш Base
+from app.database import DATABASE_URL, Base  # Импортируйте ваш Base
+from tests.conftest import TEST_DATABASE_URL
 
 # Получение параметров из командной строки
 params = context.get_x_argument(as_dictionary=True)

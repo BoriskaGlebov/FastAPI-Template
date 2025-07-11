@@ -29,34 +29,34 @@ services:
     networks:
       - girumed_net
 
-#  api:
+  api:
 #    image: boristhebladeglebov/girumed-app:latest
-#    #      build:
-#    #        context: .
-#    #        dockerfile: Dockerfile
-#    container_name: fastapi_girumed
-#    env_file:
-#      - .env
-#    ports:
-#      - "8000:8000"
-#    depends_on:
-#      db:
-#        condition: service_healthy
-#    networks:
-#      - girumed_net
-#    restart: always
-#    healthcheck:
-#      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#    deploy:
-#      resources:
-#        limits:
-#          cpus: '0.5'
-#          memory: 256M
-#        reservations:
-#          memory: 128M
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi_girumed
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - girumed_net
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 128M
 
 volumes:
   pg_data:

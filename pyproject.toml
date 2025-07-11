@@ -28,6 +28,12 @@ lint = [
     "pydantic-settings>=2.10.1",
     "flake8-pyproject>=1.2.3",
 ]
+test = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-rerunfailures>=15.1",
+    "httpx>=0.28.1",
+]
 
 
 [tool.black]
@@ -69,12 +75,15 @@ exclude = [
     "__pycache__",
     "build",
     "dist",
-    "app/migrations",
+    "app/migrations/*",
     ".git",
     ".mypy_cache",
     ".pytest_cache",
 ]
 docstring-convention = "google"
+per-file-ignores = [
+    "tests/*:D100,D101,D102,D103,D104,D105,D106,D107",
+]
 
 [tool.mypy]
 plugins = [

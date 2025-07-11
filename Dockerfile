@@ -7,11 +7,11 @@ RUN apt-get update && apt-get install -y curl && \
     mkdir /app && chown -R app:app /app
 
 # 3. Установка зависимостей из requirements.txt
-WORKDIR /girumed
+WORKDIR /FastAPI-Template
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 # Для работы с папкой логов
-RUN mkdir -p /girumed/app/logs && chown -R app:app /girumed/app/logs
+RUN mkdir -p /FastAPI-Template/app/logs && chown -R app:app /FastAPI-Template/app/logs
 # 4. Копируем приложение
 COPY . .
 
