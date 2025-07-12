@@ -22,8 +22,8 @@ up:
 	@echo "Применение миграций"
 	ENV=local alembic upgrade head
 	sleep 5
-#	@echo "Применение миграций к тестовой БД"
-#	ENV=local alembic -x db=test upgrade head
+	@echo "Применение миграций к тестовой БД"
+	ENV=local alembic -x db=test upgrade head
 
 migrate:
 	@echo "Применение миграций"
